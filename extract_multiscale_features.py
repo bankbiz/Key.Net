@@ -2,12 +2,12 @@ import os, sys, cv2
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from os import path, mkdir
 import argparse
-import keyNet.aux.tools as aux
+import keyNet.utils.tools as aux
 from skimage.transform import pyramid_gaussian
 import HSequences_bench.tools.geometry_tools as geo_tools
 import HSequences_bench.tools.repeatability_tools as rep_tools
 from keyNet.model.keynet_architecture import *
-import keyNet.aux.desc_aux_function as loss_desc
+import keyNet.utils.desc_aux_function as loss_desc
 from keyNet.model.hardnet_pytorch import *
 from keyNet.datasets.dataset_utils import read_bw_image
 import torch

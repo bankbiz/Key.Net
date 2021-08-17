@@ -4,7 +4,7 @@ from tqdm import tqdm
 import tensorflow as tf
 from keyNet.model.keynet_architecture import keynet
 from keyNet.loss.score_loss_function import msip_loss_function
-import keyNet.aux.tools as aux
+import keyNet.utils.tools as aux
 import HSequences_bench.tools.geometry_tools as geo_tools
 import HSequences_bench.tools.repeatability_tools as rep_tools
 from keyNet.datasets.tf_dataset import tf_dataset as tf_dataset
