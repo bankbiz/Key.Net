@@ -13,7 +13,20 @@ from keyNet.model.hardnet_pytorch import *
 from keyNet.datasets.dataset_utils import read_bw_image
 import torch
 
+from SOSNet import sosnet_model
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+confs = {
+    "hardnet": {
+        "name": "HardNet",
+        "pytorch_weight": "keyNet/pretrained_nets/HardNet++.pth",
+    },
+    "sosnet": {
+        "name": "SOSNet",
+        "pytorch_weight": "SOSNet/sosnet-weights/sosnet-32x32-liberty.pth",
+    },
+}
 
 
 def check_directory(dir):
@@ -31,196 +44,57 @@ def create_result_dir(path):
         check_directory(tmp)
 
 
-def extract_multiscale_features():
-
-    parser = argparse.ArgumentParser(description="HSequences Extract Features")
-
-    parser.add_argument(
-        "--list-images",
-        type=str,
-        help="File containing the image paths for extracting features.",
-        required=True,
-    )
-
-    parser.add_argument(
-        "--results-dir",
-        type=str,
-        default="extracted_features/",
-        help="The output path to save the extracted keypoint.",
-    )
-
-    parser.add_argument(
-        "--network-version",
-        type=str,
-        default="KeyNet_default",
-        help="The Key.Net network version name",
-    )
-
-    parser.add_argument(
-        "--checkpoint-det-dir",
-        type=str,
-        default="keyNet/pretrained_nets/KeyNet_default",
-        help="The path to the checkpoint file to load the detector weights.",
-    )
-
-    parser.add_argument(
-        "--pytorch-hardnet-dir",
-        type=str,
-        default="keyNet/pretrained_nets/HardNet++.pth",
-        help="The path to the checkpoint file to load the HardNet descriptor weights.",
-    )
-
-    # Detector Settings
-
-    parser.add_argument(
-        "--num-filters",
-        type=int,
-        default=8,
-        help="The number of filters in each learnable block.",
-    )
-
-    parser.add_argument(
-        "--num-learnable-blocks",
-        type=int,
-        default=3,
-        help="The number of learnable blocks after handcrafted block.",
-    )
-
-    parser.add_argument(
-        "--num-levels-within-net",
-        type=int,
-        default=3,
-        help="The number of pyramid levels inside the architecture.",
-    )
-
-    parser.add_argument(
-        "--factor-scaling-pyramid",
-        type=float,
-        default=1.2,
-        help="The scale factor between the multi-scale pyramid levels in the architecture.",
-    )
-
-    parser.add_argument(
-        "--conv-kernel-size",
-        type=int,
-        default=5,
-        help="The size of the convolutional filters in each of the learnable blocks.",
-    )
-
+def main(
+    conf,
+    list_images,  # File containing the image paths for extracting features.
+    results_dir="extracted_features/",  # The output path to save the extracted keypoint.
+    network_version="KeyNet_",  # The Key.Net network version name
+    checkpoint_det_dir="keyNet/pretrained_nets/KeyNet_default",  # The path to the checkpoint file to load the detector weights.
+    num_filters=8,  # The number of filters in each learnable block.
+    num_learnable_blocks=3,  # The number of learnable blocks after handcrafted block.
+    num_levels_within_net=3,  # The number of pyramid levels inside the architecture.
+    factor_scaling_pyramid=1.2,  # The scale factor between the multi-scale pyramid levels in the architecture.
+    conv_kernel_size=5,  # The size of the convolutional filters in each of the learnable blocks.
     # Multi-Scale Extractor Settings
-
-    parser.add_argument(
-        "--extract-MS",
-        type=bool,
-        default=True,
-        help="Set to True if you want to extract multi-scale features.",
-    )
-
-    parser.add_argument(
-        "--num-points",
-        type=int,
-        default=1500,
-        help="The number of desired features to extract.",
-    )
-
-    parser.add_argument(
-        "--nms-size",
-        type=int,
-        default=15,
-        help="The NMS size for computing the validation repeatability.",
-    )
-
-    parser.add_argument(
-        "--border-size",
-        type=int,
-        default=15,
-        help="The number of pixels to remove from the borders to compute the repeatability.",
-    )
-
-    parser.add_argument(
-        "--order-coord",
-        type=str,
-        default="xysr",
-        help="The coordinate order that follows the extracted points. Use yxsr or xysr.",
-    )
-
-    parser.add_argument(
-        "--random-seed",
-        type=int,
-        default=12345,
-        help="The random seed value for TensorFlow and Numpy.",
-    )
-
-    parser.add_argument(
-        "--pyramid_levels",
-        type=int,
-        default=5,
-        help="The number of downsample levels in the pyramid.",
-    )
-
-    parser.add_argument(
-        "--upsampled-levels",
-        type=int,
-        default=1,
-        help="The number of upsample levels in the pyramid.",
-    )
-
-    parser.add_argument(
-        "--scale-factor-levels",
-        type=float,
-        default=np.sqrt(2),
-        help="The scale factor between the pyramid levels.",
-    )
-
-    parser.add_argument(
-        "--scale-factor",
-        type=float,
-        default=2.0,
-        help="The scale factor to extract patches before descriptor.",
-    )
-
+    extract_MS=True,  # Set to True if you want to extract multi-scale features.
+    num_points=1500,  # The number of desired features to extract.
+    nms_size=15,  # The NMS size for computing the validation repeatability.
+    border_size=15,  # The number of pixels to remove from the borders to compute the repeatability.
+    order_coord="xysr",  # The coordinate order that follows the extracted points. Use yxsr or xysr.
+    random_seed=12345,  # The random seed value for TensorFlow and Numpy.
+    pyramid_levels=5,  # The number of downsample levels in the pyramid.
+    upsampled_levels=1,  # The number of upsample levels in the pyramid.
+    scale_factor_levels=np.sqrt(2),  # The scale factor between the pyramid levels.
+    scale_factor=2.0,  # The scale factor to extract patches before descriptor.
     # GPU Settings
+    gpu_memory_fraction=0.6,  # The fraction of GPU used by the script.
+    gpu_visible_devices="0",  # Set CUDA_VISIBLE_DEVICES variable.
+):
 
-    parser.add_argument(
-        "--gpu-memory-fraction",
-        type=float,
-        default=0.9,
-        help="The fraction of GPU used by the script.",
-    )
-
-    parser.add_argument(
-        "--gpu-visible-devices",
-        type=str,
-        default="0",
-        help="Set CUDA_VISIBLE_DEVICES variable.",
-    )
-
-    args = parser.parse_known_args()[0]
-
-    print(args)
+    print("configuration:", conf)
 
     # remove verbose bits from tf
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
     tf.logging.set_verbosity(tf.logging.ERROR)
 
     # Set CUDA GPU environment
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_visible_devices
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_visible_devices
 
-    version_network_name = args.network_version
+    version_network_name = network_version + conf["name"]
 
-    if not args.extract_MS:
-        args.pyramid_levels = 0
-        args.upsampled_levels = 0
+    if not extract_MS:
+        pyramid_levels = 0
+        upsampled_levels = 0
 
     print("Extract features for : " + version_network_name)
 
-    aux.check_directory(args.results_dir)
-    aux.check_directory(os.path.join(args.results_dir, version_network_name))
+    aux.check_directory(results_dir)
+    aux.check_directory(os.path.join(results_dir, version_network_name))
 
     def extract_features(image):
 
         pyramid = pyramid_gaussian(
-            image, max_layer=args.pyramid_levels, downscale=args.scale_factor_levels
+            image, max_layer=pyramid_levels, downscale=scale_factor_levels
         )
 
         score_maps = {}
@@ -237,14 +111,12 @@ def extract_multiscale_features():
 
             im_scores = sess.run(maps, feed_dict=feed_dict)
 
-            im_scores = geo_tools.remove_borders(im_scores, borders=args.border_size)
-            score_maps["map_" + str(j + 1 + args.upsampled_levels)] = im_scores[
-                0, :, :, 0
-            ]
+            im_scores = geo_tools.remove_borders(im_scores, borders=border_size)
+            score_maps["map_" + str(j + 1 + upsampled_levels)] = im_scores[0, :, :, 0]
 
-        if args.upsampled_levels:
-            for j in range(args.upsampled_levels):
-                factor = args.scale_factor_levels ** (args.upsampled_levels - j)
+        if upsampled_levels:
+            for j in range(upsampled_levels):
+                factor = scale_factor_levels ** (upsampled_levels - j)
                 up_image = cv2.resize(image, (0, 0), fx=factor, fy=factor)
 
                 im = np.reshape(up_image, (1, up_image.shape[0], up_image.shape[1], 1))
@@ -259,17 +131,13 @@ def extract_multiscale_features():
 
                 im_scores = sess.run(maps, feed_dict=feed_dict)
 
-                im_scores = geo_tools.remove_borders(
-                    im_scores, borders=args.border_size
-                )
+                im_scores = geo_tools.remove_borders(im_scores, borders=border_size)
                 score_maps["map_" + str(j + 1)] = im_scores[0, :, :, 0]
 
         im_pts = []
         for idx_level in range(levels):
 
-            scale_value = args.scale_factor_levels ** (
-                idx_level - args.upsampled_levels
-            )
+            scale_value = scale_factor_levels ** (idx_level - upsampled_levels)
             scale_factor = 1.0 / scale_value
 
             h_scale = np.asarray(
@@ -287,7 +155,7 @@ def extract_multiscale_features():
                 num_points_level = res_points
 
             im_scores = rep_tools.apply_nms(
-                score_maps["map_" + str(idx_level + 1)], args.nms_size
+                score_maps["map_" + str(idx_level + 1)], nms_size
             )
             im_pts_tmp = geo_tools.get_point_coordinates(
                 im_scores, num_points=num_points_level, order_coord="xysr"
@@ -300,11 +168,11 @@ def extract_multiscale_features():
             else:
                 im_pts = np.concatenate((im_pts, im_pts_tmp), axis=0)
 
-        if args.order_coord == "yxsr":
+        if order_coord == "yxsr":
             im_pts = np.asarray(list(map(lambda x: [x[1], x[0], x[2], x[3]], im_pts)))
 
         im_pts = im_pts[(-1 * im_pts[:, 3]).argsort()]
-        im_pts = im_pts[: args.num_points]
+        im_pts = im_pts[:num_points]
 
         # Extract descriptor from features
         descriptors = []
@@ -319,7 +187,7 @@ def extract_multiscale_features():
                 input_network: im,
                 phase_train: False,
                 kpts_coord: points_batch[:, :2],
-                kpts_scale: args.scale_factor * points_batch[:, 2],
+                kpts_scale: scale_factor * points_batch[:, 2],
                 kpts_batch: np.zeros(len(points_batch)),
                 dimension_image: np.array(
                     [1, im.shape[1], im.shape[2]], dtype=np.int32
@@ -343,7 +211,7 @@ def extract_multiscale_features():
 
     with tf.Graph().as_default():
 
-        tf.set_random_seed(args.random_seed)
+        tf.set_random_seed(random_seed)
 
         with tf.name_scope("inputs"):
 
@@ -367,7 +235,17 @@ def extract_multiscale_features():
 
         with tf.name_scope("model_deep_detector"):
 
-            deep_architecture = keynet(args)
+            deep_architecture = keynet(
+                argparse.Namespace(
+                    num_levels_within_net=num_levels_within_net,
+                    factor_scaling_pyramid=factor_scaling_pyramid,
+                    num_learnable_blocks=num_learnable_blocks,
+                    num_filters=num_filters,
+                    conv_kernel_size=conv_kernel_size,
+                    nms_size=nms_size,
+                    random_seed=random_seed,
+                )
+            )
             output_network = deep_architecture.model(
                 input_network, phase_train, dimension_image, reuse=False
             )
@@ -379,49 +257,55 @@ def extract_multiscale_features():
         )
 
         # Define Pytorch HardNet
-        model = HardNet()
-        checkpoint = torch.load(args.pytorch_hardnet_dir)
-        model.load_state_dict(checkpoint["state_dict"])
+        model = None
+
+        if conf["name"] == "SOSNet":
+            model = sosnet_model.SOSNet32x32()
+            model.load_state_dict(torch.load(conf["pytorch_weight"]))
+        else:
+            model = HardNet()
+            checkpoint = torch.load(conf["pytorch_weight"])
+            model.load_state_dict(checkpoint["state_dict"])
+
         model.eval()
         model.cuda()
 
         # Define variables
         detect_var = [v for v in tf.trainable_variables(scope="model_deep_detector")]
 
-        if os.listdir(args.checkpoint_det_dir):
+        if os.listdir(checkpoint_det_dir):
             (
                 init_assign_op_det,
                 init_feed_dict_det,
             ) = tf.contrib.framework.assign_from_checkpoint(
-                tf.train.latest_checkpoint(args.checkpoint_det_dir), detect_var
+                tf.train.latest_checkpoint(checkpoint_det_dir), detect_var
             )
 
         point_level = []
         tmp = 0.0
-        factor_points = args.scale_factor_levels ** 2
-        levels = args.pyramid_levels + args.upsampled_levels + 1
+        factor_points = scale_factor_levels ** 2
+        levels = pyramid_levels + upsampled_levels + 1
         for idx_level in range(levels):
-            tmp += factor_points ** (-1 * (idx_level - args.upsampled_levels))
+            tmp += factor_points ** (-1 * (idx_level - upsampled_levels))
             point_level.append(
-                args.num_points
-                * factor_points ** (-1 * (idx_level - args.upsampled_levels))
+                num_points * factor_points ** (-1 * (idx_level - upsampled_levels))
             )
 
         point_level = np.asarray(list(map(lambda x: int(x / tmp), point_level)))
 
         # GPU Usage
         config = tf.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = args.gpu_memory_fraction
+        config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_fraction
         config.gpu_options.allow_growth = True
 
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
 
-            if os.listdir(args.checkpoint_det_dir):
+            if os.listdir(checkpoint_det_dir):
                 sess.run(init_assign_op_det, init_feed_dict_det)
 
             # read image and extract keypoints and descriptors
-            f = open(args.list_images, "r")
+            f = open(list_images, "r")
             for path_to_image in f:
                 path = path_to_image.split("\n")[0]
 
@@ -429,9 +313,7 @@ def extract_multiscale_features():
                     print("[ERROR]: File {0} not found!".format(path))
                     return
 
-                create_result_dir(
-                    os.path.join(args.results_dir, version_network_name, path)
-                )
+                create_result_dir(os.path.join(results_dir, version_network_name, path))
 
                 im = read_bw_image(path)
 
@@ -440,16 +322,15 @@ def extract_multiscale_features():
                 im_pts, descriptors = extract_features(im)
 
                 file_name = (
-                    os.path.join(args.results_dir, version_network_name, path) + ".kpt"
+                    os.path.join(results_dir, version_network_name, path) + ".kpt"
                 )
                 np.save(file_name, im_pts)
 
                 file_name = (
-                    os.path.join(args.results_dir, version_network_name, path) + ".dsc"
+                    os.path.join(results_dir, version_network_name, path) + ".dsc"
                 )
                 np.save(file_name, descriptors)
 
 
-if __name__ == "__main__":
-    extract_multiscale_features()
-
+# if __name__ == "__main__":
+#     extract_multiscale_features()

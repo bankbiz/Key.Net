@@ -25,6 +25,17 @@ conda install -c conda-forge scikit-image
 conda install pytorch==1.2.0 -c pytorch
 ```
 
+To work with Jupyter Notebook on local. Then launch Jupyter UI and select env.
+```bash
+conda install -c anaconda ipykernel
+python -m ipykernel install --user --name=keyNet_environment
+
+# Optional Jupyter Theme
+conda install -c conda-forge jupyterthemes
+conda update jupyterthemes
+jt -t gruvboxd -T
+```
+
 ## Feature Extraction
 
 `extract_multiscale_features.py` can be used to extract Key.Net features for a given list of images. The list of images must contain the full path to them, if they do not exist, an error will raise. 
