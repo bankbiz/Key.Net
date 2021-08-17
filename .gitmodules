@@ -1,0 +1,3 @@
+[submodule "SOSNet"]
+	path = SOSNet
+	url = https://github.com/bankbiz/SOSNet.git
