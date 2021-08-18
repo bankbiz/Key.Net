@@ -1,8 +1,8 @@
 [submodule "SOSNet"]
 	path = SOSNet
 	url = https://github.com/bankbiz/SOSNet.git
-[submodule "image_matching_benchmark"]
-	path = image_matching_benchmark
+[submodule "benchmark"]
+	path = benchmark
 	url = https://github.com/bankbiz/image-matching-benchmark.git
 [submodule "benchmark_baselines"]
 	path = benchmark_baselines

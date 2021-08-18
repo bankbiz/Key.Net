@@ -67,7 +67,7 @@ def main(
     scale_factor_levels=np.sqrt(2),  # The scale factor between the pyramid levels.
     scale_factor=2.0,  # The scale factor to extract patches before descriptor.
     # GPU Settings
-    gpu_memory_fraction=0.6,  # The fraction of GPU used by the script.
+    gpu_memory_fraction=0.4,  # The fraction of GPU used by the script.
     gpu_visible_devices="0",  # Set CUDA_VISIBLE_DEVICES variable.
 ):
 
