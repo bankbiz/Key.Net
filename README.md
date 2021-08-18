@@ -33,7 +33,7 @@ python -m ipykernel install --user --name=keyNet_environment
 # Optional Jupyter Theme
 conda install -c conda-forge jupyterthemes
 conda update jupyterthemes
-jt -t gruvboxd -T
+jt -t gruvboxd -T -N
 ```
 
 ## Feature Extraction
