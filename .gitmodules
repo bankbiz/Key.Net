@@ -7,3 +7,6 @@
 [submodule "benchmark_baselines"]
 	path = benchmark_baselines
 	url = https://github.com/bankbiz/image-matching-benchmark-baselines.git
+[submodule "LoFTR"]
+	path = LoFTR
+	url = https://github.com/bankbiz/LoFTR.git
