@@ -256,7 +256,7 @@ def main(
             kpts_coord, kpts_batch, input_network, kpts_scale=kpts_scale
         )
 
-        # Define Pytorch HardNet
+        # Descriptors Model
         model = None
 
         if conf["name"] == "SOSNet":
