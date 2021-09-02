@@ -1,3 +1,8 @@
+# Clone this repo
+```
+git clone --recurse-submodules https://github.com/bankbiz/Key.Net.git
+```
+
 # Key.Net: Keypoint Detection by Handcrafted and Learned CNN Filters
 Code for the ICCV19 paper:
 
